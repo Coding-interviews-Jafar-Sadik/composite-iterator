@@ -1,0 +1,47 @@
+buildscript {
+    ext.kotlin_version = '1.3.10'
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+plugins {
+    id 'java'
+    id 'com.adarshr.test-logger' version '2.0.0'
+}
+
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    compile(
+            'com.google.guava:guava:11.0.2',
+            'org.slf4j:slf4j-api:1.7.25',
+            'org.slf4j:slf4j-log4j12:1.7.25',
+            'log4j:log4j:1.2.17',
+            "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    )
+
+    testCompile(
+            'junit:junit:4.12',
+            'org.mockito:mockito-core:2.18+',
+            'org.assertj:assertj-core:3.9.0',
+            'org.codehaus.groovy:groovy-all:2.4.15',
+            'org.spockframework:spock-core:1.2-groovy-2.4'
+    )
+
+    testRuntime(
+            'org.objenesis:objenesis:2.6', // used by spock to mock classes
+            'net.bytebuddy:byte-buddy:1.8.21' // allows mocking classes without default constructor
+    )
+}
+
+testlogger {
+    theme 'mocha'
+}
