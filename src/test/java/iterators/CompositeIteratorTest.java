@@ -3,81 +3,54 @@ package iterators;
 import org.assertj.core.util.Lists;
 import org.junit.Test;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 
 public class CompositeIteratorTest {
+    private final List<Integer> collectionA = Lists.newArrayList(1, 4, 6, 7);
+    private final List<Integer> collectionB = Lists.newArrayList(2, 8, 11);
+    private final List<Integer> collectionC = Lists.newArrayList(3, 5, 9);
+    private final List<Integer> collectionD = Lists.newArrayList(10);
+
     @Test
-    public void emptyCompositeIteratorWhenNoIteratorsProvided() {
+    public void expectEmptyCompositeIteratorWhenNoIteratorsProvided() {
         assertThat(new CompositeIterator<Integer>()).isEmpty();
     }
 
     @Test
-    public void emptyCompositeIteratorWhenAllIteratorsEmpty() {
-        // one empty iterator
+    public void expectEmptyCompositeIteratorWhenAllWrappedIteratorsAreEmpty() {
         assertThat(new CompositeIterator<>(emptyIterator())).isEmpty();
-        // two empty iterators
         assertThat(new CompositeIterator<>(emptyIterator(), emptyIterator())).isEmpty();
-        // three empty iterators
         assertThat(new CompositeIterator<>(emptyIterator(), emptyIterator(), emptyIterator())).isEmpty();
     }
 
     @Test
-    public void nonEmptyCompositeIteratorForSingleNonEmptyIterator() {
+    public void expectNonEmptyCompositeIterator() {
         assertThat(new CompositeIterator<>(iterator(0, 1, 2, 3, 4, 5)))
                 .isNotEmpty();
     }
 
     @Test
-    public void expectCompositeIteratorWithASingleElement() {
-        int anyInt = 0;
-
-        // Valid for a single-element iterator
-        assertThat(new CompositeIterator<>(iterator(anyInt))).hasSize(1);
-
-        // ... as well as for many iterators, one of which is not empty
-        assertThat(new CompositeIterator<>(iterator(anyInt), emptyIterator())).hasSize(1);
-        assertThat(new CompositeIterator<>(iterator(anyInt), emptyIterator(), emptyIterator())).hasSize(1);
-        assertThat(new CompositeIterator<>(emptyIterator(), emptyIterator(), iterator(anyInt))).hasSize(1);
+    public void shouldIterateInOrderGivenSingleNonEmptyIterator() {
+        assertThat(new CompositeIterator<>(iterator(0, 1, 2, 3, 4, 5)))
+                .containsSequence(0, 1, 2, 3, 4, 5);
     }
 
     @Test
-    public void expectProperOrderForASingleNonEmptyIterator() {
-        // Valid for a single non-empty iterator
-        assertThat(new CompositeIterator<>(iterator(0, 1, 2, 3, 4, 5)))
-                .containsSequence(0, 1, 2, 3, 4, 5);
-
-        // Valid for a multiple iterators, one of which is non empty
-        assertThat(new CompositeIterator<>(iterator(0, 1, 2, 3, 4, 5), emptyIterator(), emptyIterator()))
-                .containsSequence(0, 1, 2, 3, 4, 5);
-
-        // ... and orders of empty iterators shouldn't matter
+    public void iterationShouldNotBeAffectedByEmptyIterators() {
         assertThat(new CompositeIterator<>(emptyIterator(), iterator(0, 1, 2, 3, 4, 5), emptyIterator()))
                 .containsSequence(0, 1, 2, 3, 4, 5);
     }
 
     @Test
-    public void expectProperOrderForMultipleNonEmptyIterators() {
-        // First element to pick should be the lowest element in any of the iterators, after that the second lowest
-        // elements in any of the iterators and so on until we iterate through all the elements of the iterators.
-        assertThat(new CompositeIterator<>(
-                iterator(1, 4, 6, 7),
-                iterator(2, 8, 11),
-                iterator(3, 5, 9),
-                iterator(10)
-        )).containsSequence(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
-
-        assertThat(new CompositeIterator<>(
-                iterator(5),
-                iterator(4),
-                iterator(3),
-                iterator(2),
-                iterator(1)
-        )).containsSequence(1, 2, 3, 4, 5);
-
+    public void expectProperOrderForMultipleIntIterators() {
         assertThat(new CompositeIterator<>(
                 iterator(15, 100, 102),
                 iterator(6, 14),
@@ -88,14 +61,17 @@ public class CompositeIteratorTest {
     }
 
     @Test
-    public void expectProperOrderForMultipleNonEmptyStringIterators() {
+    public void expectProperOrderForMultipleStringIterators() {
         assertThat(new CompositeIterator<>(
                 iterator("zebra"),
                 iterator("dog"),
                 iterator("cat"),
                 iterator("butterfly")
         )).containsSequence("butterfly", "cat", "dog", "zebra");
+    }
 
+    @Test
+    public void expectProperOrderForMultipleCharIterators() {
         assertThat(new CompositeIterator<>(
                 iterator('a', 'd', 'e', 'f'),
                 iterator('b', 'k', 'o'),
@@ -104,78 +80,59 @@ public class CompositeIteratorTest {
         )).containsSequence('a', 'b', 'd', 'e', 'f', 'k', 'l', 'o', 'x', 'y', 'z');
     }
 
-
     @Test
-    public void removeOneElementFromSingleCollection() {
+    public void shouldRemoveOneElementFromSingleCollection() {
+        // Given a single-element collection
         List<Integer> collection = Lists.newArrayList(1);
         CompositeIterator<Integer> it = new CompositeIterator<>(collection.iterator());
-        assertThat(it.next()).isEqualTo(1);
-        it.remove(); // removes 1 from the backing collection
+
+        // After removing this element during iteration
+        it.next(); it.remove();
+
+        // Expect an empty collection
         assertThat(it.hasNext()).isFalse();
         assertThat(collection).isEmpty();
     }
 
     @Test
-    public void removeManyElementsFromSingleCollection() {
-        //Given collection with 6 elements
+    public void shouldRemoveManyElementsFromSingleCollection() {
+        // Given a collection with 6 elements
         List<Integer> collection = Lists.newArrayList(1, 2, 3, 4, 5, 6);
         CompositeIterator<Integer> iterator = new CompositeIterator<>(collection.iterator());
 
         // After removing 2 of them during iteration
-        assertThat(iterator.next()).isEqualTo(1);
-        assertThat(iterator.next()).isEqualTo(2);
-        iterator.remove(); // removes 2 from the backing collection
-        assertThat(iterator.next()).isEqualTo(3);
-        assertThat(iterator.next()).isEqualTo(4);
-        assertThat(iterator.next()).isEqualTo(5);
-        iterator.remove(); // removes 5 from the backing collection
-        assertThat(iterator.next()).isEqualTo(6);
-        assertThat(iterator.hasNext()).isFalse();
+        skip(iterator, 1); iterator.remove();
+        skip(iterator, 2); iterator.remove();
 
-        // We expect collection with 4 elements
+        // Expect collection with 4 elements
         assertThat(collection).hasSize(4).containsSequence(1, 3, 4, 6);
     }
 
     @Test
-    public void removeTwoElementsInARow() {
-        // Given collection with 4 elements
+    public void shouldRemoveTwoElementsInRow() {
+        // Given a collection with 4 elements
         List<Integer> collection = Lists.newArrayList(1, 2, 3, 4);
         CompositeIterator<Integer> iterator = new CompositeIterator<>(collection.iterator());
 
-        // After removing 2 elements in row during iteration
-        assertThat(iterator.next()).isEqualTo(1);
-        assertThat(iterator.next()).isEqualTo(2);
-        iterator.remove(); // remove 2 from the backing collection
-        assertThat(iterator.next()).isEqualTo(3);
-        iterator.remove(); // remove 3 from the backing collection
-        assertThat(iterator.next()).isEqualTo(4);
-        assertThat(iterator.hasNext()).isFalse();
+        // After removing 2 elements in a row during iteration
+        skip(iterator, 1); iterator.remove();
+        iterator.next(); iterator.remove();
 
-        // We expect collection with 2 elements
+        // Expect collection with 2 elements
         assertThat(collection).hasSize(2).containsSequence(1, 4);
     }
 
     @Test
-    public void removeOneElementFromMultipleCollections() {
-        // Given four non-empty collections
-        List<Integer> collectionA = Lists.newArrayList(1, 4, 6, 7),
-                collectionB = Lists.newArrayList(2, 8, 11),
-                collectionC = Lists.newArrayList(3, 5, 9),
-                collectionD = Lists.newArrayList(10);
-
+    public void shouldRemoveOneElementFromMultipleCollections() {
+        // Given a composite iterator wrapping four non-empty iterators
         CompositeIterator<Integer> iterator = new CompositeIterator<>(collectionA.iterator(), collectionB.iterator(),
                 collectionC.iterator(), collectionD.iterator());
 
         // After removing 1 element during iteration
-        assertThat(iterator.next()).isEqualTo(1);
-        assertThat(iterator.next()).isEqualTo(2);
-        assertThat(iterator.next()).isEqualTo(3);
-        assertThat(iterator.next()).isEqualTo(4);
-        assertThat(iterator.next()).isEqualTo(5);
-        iterator.remove(); // remove 5 from collection C
+        skip(iterator, 4); iterator.remove();
         assertThat(iterator).containsSequence(6, 7, 8, 9, 10, 11);
 
-        // We expect that it has been removed from proper backing collection
+        // Expect that it was removed from a proper collection
         assertThat(collectionC).containsSequence(3, 9);
 
         // ... and that all remaining collections stay unaffected.
@@ -185,35 +142,18 @@ public class CompositeIteratorTest {
     }
 
     @Test
-    public void removeManyElementsFromMultipleCollections() {
-        // Given four non-empty collections
-        List<Integer> collectionA = Lists.newArrayList(1, 4, 6, 7),
-                collectionB = Lists.newArrayList(2, 8, 11),
-                collectionC = Lists.newArrayList(3, 5, 9),
-                collectionD = Lists.newArrayList(10);
-
+    public void shouldRemoveManyElementsFromMultipleCollections() {
+        // Given a composite iterator wrapping four non-empty iterators
         CompositeIterator<Integer> iterator = new CompositeIterator<>(collectionA.iterator(), collectionB.iterator(),
                 collectionC.iterator(), collectionD.iterator());
 
         // After removing several elements during iteration
-        assertThat(iterator.next()).isEqualTo(1);
-        assertThat(iterator.next()).isEqualTo(2);
-        iterator.remove(); // remove 2 from collection B
-        assertThat(iterator.next()).isEqualTo(3);
-        assertThat(iterator.next()).isEqualTo(4);
-        iterator.remove(); // remove 4 from collection A
-        assertThat(iterator.next()).isEqualTo(5);
-        assertThat(iterator.next()).isEqualTo(6);
-        assertThat(iterator.next()).isEqualTo(7);
-        iterator.remove(); // remove 7 from collection A
-        assertThat(iterator.next()).isEqualTo(8);
-        assertThat(iterator.next()).isEqualTo(9);
-        assertThat(iterator.next()).isEqualTo(10);
-        iterator.remove(); // remove 10 from collection D
-        assertThat(iterator.next()).isEqualTo(11);
-        assertThat(iterator).isEmpty();
+        skip(iterator, 1); iterator.remove();
+        skip(iterator, 1); iterator.remove();
+        skip(iterator, 2); iterator.remove();
+        skip(iterator, 2); iterator.remove();
 
-        // We expect that those elements have been removed from proper backing collections
+        // Expect that proper elements were removed from backing collections
         assertThat(collectionA).containsSequence(1, 6);
         assertThat(collectionB).containsSequence(8, 11);
         assertThat(collectionD).isEmpty();
@@ -229,7 +169,7 @@ public class CompositeIteratorTest {
 
     @Test(expected = IllegalStateException.class)
     public void failOnAttemptToRemoveElementTwice() {
-        CompositeIterator iterator = new CompositeIterator<>(iterator(1, 2, 3));
+        CompositeIterator<Integer> iterator = new CompositeIterator<>(iterator(1, 2, 3));
         iterator.next();
         iterator.remove();
         iterator.remove();
@@ -295,5 +235,11 @@ public class CompositeIteratorTest {
     private Consumer<Integer> ignore() {
         return ignore -> {
         };
+    }
+
+    private <T> void skip(Iterator<T> iterator, int count) {
+        do {
+            iterator.next();
+        } while (count-- > 0);
     }
 }

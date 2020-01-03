@@ -97,6 +97,6 @@ public class CompositeIterator<T extends Comparable<T>> implements Iterator<T> {
     }
 
     private ComparableIterator<T> emptyIterator() {
-        return new ComparableIterator<>(new ArrayList<T>().iterator());
+        return new ComparableIterator<T>(Collections.emptyIterator());
     }
 }
